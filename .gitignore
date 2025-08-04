@@ -35,3 +35,5 @@ target/
 ### Spring Boot Config Files (DO NOT PUSH SECRETS) ###
 application.yml
 application-*.yml
+.env
+
