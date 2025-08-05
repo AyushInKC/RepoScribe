@@ -28,10 +28,13 @@ public class RepoDocController {
     public ResponseEntity<?> generateDoc(@RequestParam String accessToken,
                                          @RequestBody User userRequest) {
         try {
-            // 1️⃣ Save user input to DB
-            userRepository.save(userRequest);
+            // ✅ Store only repoLink & containsAPI
+            User userToSave = new User();
+            userToSave.setRepoLink(userRequest.getRepoLink());
+            userToSave.setContainsAPI(userRequest.isContainsAPI());
+            userRepository.save(userToSave);
 
-            // 2️⃣ Parse owner/repo
+            // ✅ Extract owner/repo
             String[] parts = userRequest.getRepoLink()
                     .replace("https://github.com/", "")
                     .split("/");
@@ -41,73 +44,99 @@ public class RepoDocController {
             String owner = parts[0];
             String repo = parts[1];
 
-            // 3️⃣ Fetch file list
-            WebClient githubApi = WebClient.builder()
-                    .baseUrl("https://api.github.com")
-                    .defaultHeader("Authorization", "Bearer " + accessToken)
-                    .defaultHeader("Accept", "application/vnd.github+json")
-                    .build();
-
-            List<Map<String, Object>> files = githubApi.get()
-                    .uri("/repos/{owner}/{repo}/contents", owner, repo)
-                    .retrieve()
-                    .bodyToMono(List.class)
-                    .block();
-
-            if (files == null || files.isEmpty()) {
-                return ResponseEntity.badRequest().body("No files found in repository.");
-            }
-
-            // 4️⃣ Get first few file contents
+            // ✅ Fetch all files recursively
             StringBuilder repoCode = new StringBuilder();
-            int count = 0;
-            for (Map<String, Object> file : files) {
-                if ("file".equals(file.get("type")) && count < 5) {
-                    String downloadUrl = (String) file.get("download_url");
-                    String content = WebClient.create()
-                            .get()
-                            .uri(downloadUrl)
-                            .retrieve()
-                            .bodyToMono(String.class)
-                            .block();
-                    repoCode.append("\n\nFile: ").append(file.get("name"))
-                            .append("\n").append(content);
-                    count++;
-                }
-            }
+            int[] count = {0};
+            fetchFilesRecursively(owner, repo, "", accessToken, repoCode, count);
 
-            // 5️⃣ Create AI prompt based on API flag
-            String prompt;
+            // 1️⃣ Generate repo documentation
+            String repoPrompt = """
+            You are a senior technical writer.
+            TASK:
+            1. Read the provided repository code.
+            2. Generate ONLY repository documentation (purpose, tech stack, features, setup).
+            3. Do NOT include API documentation.
+            4. Do NOT guess. If details are missing, write "Not provided in repository".
+            5. Output in Markdown format.
+
+            PROJECT NAME: %s
+
+            REPOSITORY CONTENT:
+            %s
+            """.formatted(repo, repoCode);
+
+            String repoDoc = geminiService.generateDocumentation(repoPrompt);
+
+            // 2️⃣ Generate API documentation only if containsAPI=true
+            String apiDoc = "";
             if (userRequest.isContainsAPI()) {
-                prompt = """
-                        You are a documentation generator.
-                        Read the following codebase and generate:
-                        1. A summary of the project.
-                        2. API documentation (methods, request, response).
-                        
-                        Code:
-                        """ + repoCode;
-            } else {
-                prompt = """
-                        You are a documentation generator.
-                        Read the following codebase and generate:
-                        1. A summary of the project.
-                        
-                        Code:
-                        """ + repoCode;
+                String apiPrompt = """
+                You are a senior technical writer.
+                TASK:
+                1. Read the provided repository code.
+                2. Generate ONLY API documentation (endpoints, request/response examples).
+                3. Do NOT include repository summary or setup.
+                4. Do NOT guess. If details are missing, write "Not provided in repository".
+                5. Output in Markdown format.
+
+                PROJECT NAME: %s
+
+                REPOSITORY CONTENT:
+                %s
+                """.formatted(repo, repoCode);
+
+                apiDoc = geminiService.generateDocumentation(apiPrompt);
             }
 
-            // 6️⃣ Get AI documentation
-            String documentation = geminiService.generateDocumentation(prompt);
-
-            // 7️⃣ Return response
+            // ✅ Return in structured JSON
             return ResponseEntity.ok(Map.of(
                     "repo", userRequest.getRepoLink(),
-                    "documentation", documentation
+                    "repoDoc", repoDoc,
+                    "apiDoc", apiDoc
             ));
 
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Recursively fetches all files from a GitHub repository and appends their content.
+     */
+    private void fetchFilesRecursively(String owner, String repo, String path, String accessToken, StringBuilder repoCode, int[] count) {
+        WebClient githubApi = WebClient.builder()
+                .baseUrl("https://api.github.com")
+                .defaultHeader("Authorization", "Bearer " + accessToken)
+                .defaultHeader("Accept", "application/vnd.github+json")
+                .build();
+
+        List<Map<String, Object>> files = githubApi.get()
+                .uri("/repos/{owner}/{repo}/contents/{path}", owner, repo, path)
+                .retrieve()
+                .bodyToMono(List.class)
+                .block();
+
+        if (files == null) return;
+
+        for (Map<String, Object> file : files) {
+            String type = (String) file.get("type");
+            String filePath = (String) file.get("path");
+
+            if ("file".equals(type) && count[0] < 20) { // Limit number of files
+                String downloadUrl = (String) file.get("download_url");
+                String content = WebClient.create()
+                        .get()
+                        .uri(downloadUrl)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+
+                repoCode.append("\n\nFile: ").append(filePath).append("\n").append(content);
+                count[0]++;
+            } else if ("dir".equals(type)) {
+                // Recursive call for subdirectories
+                fetchFilesRecursively(owner, repo, filePath, accessToken, repoCode, count);
+            }
         }
     }
 }

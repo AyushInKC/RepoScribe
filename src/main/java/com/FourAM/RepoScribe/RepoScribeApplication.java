@@ -3,7 +3,12 @@ package com.FourAM.RepoScribe;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.test.context.TestPropertySource;
 
+@TestPropertySource(properties = {
+		"GITHUB_CLIENT_ID=dummy",
+		"GITHUB_CLIENT_SECRET=dummy"
+})
 @SpringBootApplication
 public class RepoScribeApplication {
 
