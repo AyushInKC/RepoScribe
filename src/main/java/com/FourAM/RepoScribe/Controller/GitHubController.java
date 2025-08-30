@@ -1,20 +1,25 @@
 package com.FourAM.RepoScribe.Controller;
 
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;   // ✅ correct import
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
 @RestController
 public class GitHubController {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    // Inject RestTemplate
+    public GitHubController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @Value("${github.client-id}")
     private String clientId;
@@ -25,7 +30,7 @@ public class GitHubController {
     @Value("${github.redirect-uri}")
     private String redirectUri;
 
-    // GitHub login
+    // GitHub login endpoint
     @GetMapping("/auth/github/login")
     public void login(HttpServletResponse response) throws IOException {
         String redirectUrl = "https://github.com/login/oauth/authorize" +
@@ -36,7 +41,7 @@ public class GitHubController {
         response.sendRedirect(redirectUrl);
     }
 
-    // Callback
+    // GitHub callback endpoint
     @GetMapping("/auth/github/callback")
     public ResponseEntity<?> callback(@RequestParam String code) {
         Map<String, String> request = Map.of(
