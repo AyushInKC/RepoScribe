@@ -1,7 +1,6 @@
 package com.FourAM.RepoScribe.Controller;
 
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
+import com.FourAM.RepoScribe.Properties.GitHubProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,32 +15,21 @@ import java.util.Map;
 public class GitHubController {
 
     private final RestTemplate restTemplate;
+    private final GitHubProperties githubProperties;
 
-    // Inject RestTemplate
-    public GitHubController(RestTemplate restTemplate) {
+    public GitHubController(RestTemplate restTemplate, GitHubProperties githubProperties) {
         this.restTemplate = restTemplate;
+        this.githubProperties = githubProperties;
     }
 
-    @Value("${github.client-id}")
-    private String clientId;
 
-    @Value("${github.client-secret}")
-    private String clientSecret;
-
-    @Value("${github.redirect-uri}")
-    private String redirectUri;
-    @PostConstruct
-    public void init() {
-        System.out.println("GitHub Client ID: " + clientId);
-        System.out.println("GitHub Redirect URI: " + redirectUri);
-    }
 
     // GitHub login endpoint
     @GetMapping("/auth/github/login")
     public void login(HttpServletResponse response) throws IOException {
         String redirectUrl = "https://github.com/login/oauth/authorize" +
-                "?client_id=" + clientId +
-                "&redirect_uri=" + redirectUri +
+                "?client_id=" + githubProperties.getClientId() +
+                "&redirect_uri=" + githubProperties.getRedirectUri() +
                 "&scope=repo&state=" + System.currentTimeMillis();
 
         response.sendRedirect(redirectUrl);
@@ -51,10 +39,10 @@ public class GitHubController {
     @GetMapping("/auth/github/callback")
     public ResponseEntity<?> callback(@RequestParam String code) {
         Map<String, String> request = Map.of(
-                "client_id", clientId,
-                "client_secret", clientSecret,
+                "client_id", githubProperties.getClientId(),
+                "client_secret", githubProperties.getClientSecret(),
                 "code", code,
-                "redirect_uri", redirectUri
+                "redirect_uri", githubProperties.getRedirectUri()
         );
 
         ResponseEntity<Map> response = restTemplate.postForEntity(
