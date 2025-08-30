@@ -1,5 +1,6 @@
 package com.FourAM.RepoScribe.Service;
 
+import com.FourAM.RepoScribe.Properties.CohereProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -11,10 +12,10 @@ public class CohereService {
 
     private final WebClient webClient;
 
-    public CohereService(@Value("${cohere.api-key}") String apiKey) {  // ✅ matches application.yml
+    public CohereService(CohereProperties properties) {
         this.webClient = WebClient.builder()
                 .baseUrl("https://api.cohere.ai/v1")
-                .defaultHeader("Authorization", "Bearer " + apiKey)
+                .defaultHeader("Authorization", "Bearer " + properties.getApiKey())
                 .defaultHeader("Content-Type", "application/json")
                 .build();
     }
