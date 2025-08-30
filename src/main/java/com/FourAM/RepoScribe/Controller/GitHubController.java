@@ -1,5 +1,6 @@
 package com.FourAM.RepoScribe.Controller;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +30,11 @@ public class GitHubController {
 
     @Value("${github.redirect-uri}")
     private String redirectUri;
+    @PostConstruct
+    public void init() {
+        System.out.println("GitHub Client ID: " + clientId);
+        System.out.println("GitHub Redirect URI: " + redirectUri);
+    }
 
     // GitHub login endpoint
     @GetMapping("/auth/github/login")
