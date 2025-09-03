@@ -14,19 +14,20 @@ import java.util.Map;
 @RestController
 public class GitHubController {
 
-    private final RestTemplate restTemplate;
+    private final RestTemplate restTemplate = new RestTemplate();
     private final GitHubProperties githubProperties;
 
-    public GitHubController(RestTemplate restTemplate, GitHubProperties githubProperties) {
-        this.restTemplate = restTemplate;
+    public GitHubController(GitHubProperties githubProperties) {
         this.githubProperties = githubProperties;
     }
-
-
 
     // GitHub login endpoint
     @GetMapping("/auth/github/login")
     public void login(HttpServletResponse response) throws IOException {
+        if (githubProperties.getClientId() == null || githubProperties.getRedirectUri() == null) {
+            throw new IllegalStateException("❌ GitHub OAuth properties not loaded properly.");
+        }
+
         String redirectUrl = "https://github.com/login/oauth/authorize" +
                 "?client_id=" + githubProperties.getClientId() +
                 "&redirect_uri=" + githubProperties.getRedirectUri() +
