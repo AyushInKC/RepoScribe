@@ -23,6 +23,7 @@ public class GitHubController {
 
     public GitHubController(GitHubProperties githubProperties) {
         this.githubProperties = githubProperties;
+        System.out.println("✅ GitHubController loaded!");
     }
 
     // GitHub login endpoint
