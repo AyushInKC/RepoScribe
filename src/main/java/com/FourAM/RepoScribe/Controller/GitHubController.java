@@ -1,7 +1,11 @@
 package com.FourAM.RepoScribe.Controller;
 
 import com.FourAM.RepoScribe.Properties.GitHubProperties;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,19 +43,24 @@ public class GitHubController {
     // GitHub callback endpoint
     @GetMapping("/auth/github/callback")
     public ResponseEntity<?> callback(@RequestParam String code) {
-        Map<String, String> request = Map.of(
-                "client_id", githubProperties.getClientId(),
-                "client_secret", githubProperties.getClientSecret(),
-                "code", code,
-                "redirect_uri", githubProperties.getRedirectUri()
-        );
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/json");  // GitHub requires this
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", githubProperties.getClientId());
+        body.add("client_secret", githubProperties.getClientSecret());
+        body.add("code", code);
+        body.add("redirect_uri", githubProperties.getRedirectUri());
+
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
         ResponseEntity<Map> response = restTemplate.postForEntity(
-                "https://github.com/login/oauth/access_token?accept=json",
-                request,
+                "https://github.com/login/oauth/access_token",
+                entity,
                 Map.class
         );
 
         return ResponseEntity.ok(response.getBody());
     }
+
 }
