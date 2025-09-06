@@ -8,7 +8,7 @@ cohere:
 github:
   clientId: Ov23liHofip0pyG42YzZ
   clientSecret: 0b829ea0ee6cf817c45b837616f0712ee6dc9e0f
-  redirectUri: https://reposcribe-1.onrender.com/auth/github/callback
+  redirectUri: https://repo-scribe.vercel.app/auth/callback
 
   server:
     port: ${PORT:8080}
