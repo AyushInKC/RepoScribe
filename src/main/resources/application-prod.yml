@@ -4,7 +4,7 @@ spring:
       uri: mongodb+srv://sirfayush1008:Ayush%403344@cluster0.ngtgm.mongodb.net/RepoScribe?retryWrites=true&w=majority
 
 cohere:
-  apiKey: fRFZdMkAokUJJfFsvkVWHzbouD6oPibUEOpGlwUU
+  apiKey: aTOzx4iYpzkpcBOuhxQer5GaCVBvDSCzk56CBACS
 github:
   clientId: Ov23liHofip0pyG42YzZ
   clientSecret: 0b829ea0ee6cf817c45b837616f0712ee6dc9e0f
